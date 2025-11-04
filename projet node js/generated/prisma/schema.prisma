@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  userId    Int
+  postId    Int
+
+  post post @relation(fields: [postId], references: [id], map: "Comment_postId_fkey")
+  user user @relation(fields: [userId], references: [id], map: "Comment_userId_fkey")
+
+  @@index([postId], map: "Comment_postId_fkey")
+  @@index([userId], map: "Comment_userId_fkey")
+}
+
+model follow {
+  id          Int      @id @default(autoincrement())
+  followerId  Int
+  followingId Int
+  createdAt   DateTime @default(now())
+
+  user_follow_followerIdTouser  user @relation("follow_followerIdTouser", fields: [followerId], references: [id], map: "Follow_followerId_fkey")
+  user_follow_followingIdTouser user @relation("follow_followingIdTouser", fields: [followingId], references: [id], map: "Follow_followingId_fkey")
+
+  @@unique([followerId, followingId], map: "Follow_followerId_followingId_key")
+  @@index([followingId], map: "Follow_followingId_fkey")
+}
+
+model user {
+  id         Int      @id @default(autoincrement())
+  username   String   @unique(map: "User_username_key")
+  email      String   @unique(map: "User_email_key")
+  password   String
+  profilePic String?
+  coverPic   String?
+  bio        String?
+  isAdmin    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  comment                                     comment[]
+  follow_follow_followerIdTouser              follow[]       @relation("follow_followerIdTouser")
+  follow_follow_followingIdTouser             follow[]       @relation("follow_followingIdTouser")
+  like                                        like[]
+  message_message_recipientIdTouser           message[]      @relation("message_recipientIdTouser")
+  message_message_senderIdTouser              message[]      @relation("message_senderIdTouser")
+  notification_notification_recipientIdTouser notification[] @relation("notification_recipientIdTouser")
+  notification_notification_senderIdTouser    notification[] @relation("notification_senderIdTouser")
+  post_post_userIdTouser                      post[]         @relation("post_userIdTouser")
+  share                                       share[]
+  post_savedposts                             post[]         @relation("savedposts")
+
+  conversationAsUser1 conversation[] @relation("UserConversations1")
+  conversationAsUser2 conversation[] @relation("UserConversations2")
+}
+
+model like {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  userId    Int
+  postId    Int
+
+  post post @relation(fields: [postId], references: [id], map: "Like_postId_fkey")
+  user user @relation(fields: [userId], references: [id], map: "Like_userId_fkey")
+
+  @@unique([userId, postId], map: "Like_userId_postId_key")
+  @@index([postId], map: "Like_postId_fkey")
+}
+
+model post {
+  id        Int      @id @default(autoincrement())
+  content   String
+  createdAt DateTime @default(now())
+  userId    Int
+
+  comment                  comment[]
+  like                     like[]
+  media_media_postIdTopost media[]        @relation("media_postIdTopost")
+  notification             notification[]
+  user_post_userIdTouser   user           @relation("post_userIdTouser", fields: [userId], references: [id], map: "Post_userId_fkey")
+  share                    share[]
+  media_postvideos         media[]        @relation("postvideos")
+  user_savedposts          user[]         @relation("savedposts")
+
+  @@index([userId], map: "Post_userId_fkey")
+}
+
+model media {
+  id        Int      @id @default(autoincrement())
+  url       String
+  type      String
+  createdAt DateTime @default(now())
+  postId    Int
+
+  post_media_postIdTopost post   @relation("media_postIdTopost", fields: [postId], references: [id], map: "Media_postId_fkey")
+  post_postvideos         post[] @relation("postvideos")
+
+  @@index([postId], map: "Media_postId_fkey")
+}
+
+model conversation {
+  id        Int      @id @default(autoincrement())
+  user1Id   Int
+  user2Id   Int
+  createdAt DateTime @default(now())
+
+  user1 user @relation("UserConversations1", fields: [user1Id], references: [id])
+  user2 user @relation("UserConversations2", fields: [user2Id], references: [id])
+
+  messages message[]
+}
+
+model message {
+  id             Int      @id @default(autoincrement())
+  content        String
+  createdAt      DateTime @default(now())
+  senderId       Int
+  recipientId    Int
+  conversationId Int
+
+  user_message_senderIdTouser    user         @relation("message_senderIdTouser", fields: [senderId], references: [id], map: "Message_senderId_fkey")
+  user_message_recipientIdTouser user         @relation("message_recipientIdTouser", fields: [recipientId], references: [id], map: "Message_recipientId_fkey")
+  conversation                   conversation @relation(fields: [conversationId], references: [id])
+
+  @@index([recipientId], map: "Message_recipientId_fkey")
+  @@index([senderId], map: "Message_senderId_fkey")
+  @@index([conversationId])
+}
+
+model notification {
+  id          Int      @id @default(autoincrement())
+  type        String
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  recipientId Int
+  senderId    Int
+  postId      Int?
+
+  post                                post? @relation(fields: [postId], references: [id], map: "Notification_postId_fkey")
+  user_notification_recipientIdTouser user  @relation("notification_recipientIdTouser", fields: [recipientId], references: [id], map: "Notification_recipientId_fkey")
+  user_notification_senderIdTouser    user  @relation("notification_senderIdTouser", fields: [senderId], references: [id], map: "Notification_senderId_fkey")
+
+  @@index([postId], map: "Notification_postId_fkey")
+  @@index([recipientId], map: "Notification_recipientId_fkey")
+  @@index([senderId], map: "Notification_senderId_fkey")
+}
+
+model share {
+  id        Int      @id @default(autoincrement())
+  createdAt DateTime @default(now())
+  userId    Int
+  postId    Int
+
+  post post @relation(fields: [postId], references: [id], map: "Share_postId_fkey")
+  user user @relation(fields: [userId], references: [id], map: "Share_userId_fkey")
+
+  @@unique([userId, postId], map: "Share_userId_postId_key")
+  @@index([postId], map: "Share_postId_fkey")
+}

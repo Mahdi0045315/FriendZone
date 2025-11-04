@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "jsx": "react",
+    "baseUrl": ".",
+    "paths": {
+      "@/lib/prisma": ["./prisma.js"],  // Mapping spécifique
+      "@/*": ["./src/*"]               // Autres imports
+    }
+  }
+}
